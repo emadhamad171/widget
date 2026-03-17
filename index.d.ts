@@ -17,7 +17,6 @@ declare class HotpotSwapWidget extends HTMLElement {
     private isTokenListLoading;
     private swapStatusType;
     private swapStatusMessage;
-    private isWalletConnectError;
     private swapTxHash;
     private intentIdForStatus;
     private intentStatusFromApi;
