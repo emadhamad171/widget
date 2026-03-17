@@ -1,0 +1,76 @@
+{
+  "version": 1.2,
+  "tags": [
+    {
+      "name": "hotpot-swap-widget",
+      "description": "HotPot Swap Widget - embeddable DeFi swap component",
+      "attributes": [
+        {
+          "name": "theme",
+          "description": "Theme: light | dark | auto (follows system)",
+          "values": [
+            { "name": "light" },
+            { "name": "dark" },
+            { "name": "auto" }
+          ]
+        },
+        {
+          "name": "primary-text-color",
+          "description": "Primary text color (hex, rgb, or name)"
+        },
+        {
+          "name": "secondary-text-color",
+          "description": "Secondary/muted text color"
+        },
+        {
+          "name": "background-color",
+          "description": "Widget background color"
+        },
+        {
+          "name": "card-background-color",
+          "description": "Card and input field background color"
+        },
+        {
+          "name": "button-color",
+          "description": "Primary button background color"
+        },
+        {
+          "name": "button-text-color", 
+          "description": "Primary button text color"
+        },
+        {
+          "name": "icons-color",
+          "description": "Color for small icons (wallet icon in balance, chevrons)"
+        },
+        {
+          "name": "default-from-token",
+          "description": "Default 'You pay' token symbol",
+          "values": [
+            { "name": "ETH" },
+            { "name": "USDT" },
+            { "name": "USDC" },
+            { "name": "TRX" },
+            { "name": "SOL" },
+            { "name": "BTC" }
+          ]
+        },
+        {
+          "name": "default-to-token",
+          "description": "Default 'You receive' token symbol",
+          "values": [
+            { "name": "ETH" },
+            { "name": "USDT" },
+            { "name": "USDC" },
+            { "name": "TRX" },
+            { "name": "SOL" },
+            { "name": "BTC" }
+          ]
+        },
+        {
+          "name": "default-slippage",
+          "description": "Default slippage tolerance (e.g. 0.5 for 0.5%)"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "name": "@hotpot/swap-widget",
+  "version": "0.1.0",
+  "description": "Embeddable DeFi swap widget for HotPot",
+  "main": "dist/widget.umd.js",
+  "module": "dist/widget.esm.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "deploy": "npm run build && gh-pages -d dist",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "defi",
+    "swap",
+    "widget",
+    "web3",
+    "ethereum",
+    "tron"
+  ],
+  "author": "HotPot",
+  "license": "MIT",
+  "dependencies": {
+    "@hot-pot/hotpot-sdk-ts": "^0.0.12",
+    "axios": "^1.9.0",
+    "decimal.js": "^10.5.0",
+    "viem": "^2.45.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.16",
+    "gh-pages": "^6.3.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.3.5",
+    "vite-plugin-dts": "^4.3.0"
+  }
+}
