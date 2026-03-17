@@ -84,6 +84,7 @@ class HotpotSwapWidget extends HTMLElement {
   private swapStatusType: "idle" | "loading" | "success" | "error" | "warning" =
     "idle";
   private swapStatusMessage: string = "";
+  private isWalletConnectError: boolean = false;
   private swapTxHash: string | null = null;
   private intentIdForStatus: string | null = null;
   private intentStatusFromApi: IntentStatus | null = null;
@@ -450,7 +451,9 @@ class HotpotSwapWidget extends HTMLElement {
       text = "Transaction successful";
       iconSvg = ICON_SUCCESS_RAW;
     } else if (status === "error") {
-      text = "Transaction failed";
+      text = this.isWalletConnectError
+        ? this.swapStatusMessage || "Connection failed"
+        : "Transaction failed";
       iconSvg = EXCLAMATION_ERROR_RAW;
     } else if (status === "warning" && priceImpact != null) {
       text = `Token price is below the market ${priceImpact}%`;
@@ -526,9 +529,17 @@ class HotpotSwapWidget extends HTMLElement {
         "Your swap was successfully executed. You can track it in your transaction history.";
       buttonLabel = "Back to swap";
     } else if (isError) {
-      title = "Transaction failed";
-      subtitle = "The transaction could not be completed.";
-      buttonLabel = "Try again";
+      if (this.isWalletConnectError) {
+        title = "Connection failed";
+        subtitle =
+          this.swapStatusMessage ||
+          "Could not connect to your wallet. Try opening this page in your wallet's in-app browser (e.g. MetaMask) or ensure the wallet extension is installed.";
+        buttonLabel = "Try again";
+      } else {
+        title = "Transaction failed";
+        subtitle = "The transaction could not be completed.";
+        buttonLabel = "Try again";
+      }
     }
 
     const isDarkTheme =
@@ -553,7 +564,9 @@ class HotpotSwapWidget extends HTMLElement {
           </div>
           <div class="tx-modal-body">
             <h2 class="tx-modal-title">${this.escapeHtml(title)}</h2>
-            <div class="tx-modal-amount-row">
+            ${
+              !this.isWalletConnectError
+                ? `<div class="tx-modal-amount-row">
               <div class="tx-modal-token">
                 ${this.renderTokenIcon(this.fromTokenData)}
                 <div class="tx-modal-token-text">
@@ -571,7 +584,9 @@ class HotpotSwapWidget extends HTMLElement {
                   )} ${this.escapeHtml(toSymbol)}</span>
                 </div>
               </div>
-            </div>
+            </div>`
+                : ""
+            }
             <p class="tx-modal-subtitle">
               ${
                 subtitle === "Confirm this transaction in your wallet."
@@ -989,6 +1004,7 @@ class HotpotSwapWidget extends HTMLElement {
             this.showSwapStatusModal(
               "error",
               msg || "Failed to connect wallet",
+              { isWalletConnect: true },
             );
           }
         } finally {
@@ -1223,7 +1239,11 @@ class HotpotSwapWidget extends HTMLElement {
       "tx-modal-primary-btn",
     );
     txModalPrimaryBtn?.addEventListener("click", () => {
+      const wasWalletConnectError = this.isWalletConnectError;
       this.clearSwapStatus();
+      if (wasWalletConnectError) {
+        this.showConnectWalletModal = true;
+      }
       this.render();
       this.attachEventListeners();
     });
@@ -1501,9 +1521,11 @@ class HotpotSwapWidget extends HTMLElement {
   private showSwapStatusModal(
     type: "loading" | "success" | "error",
     message: string,
+    options?: { isWalletConnect?: boolean },
   ) {
     this.swapStatusType = type;
     this.swapStatusMessage = message.replace(/^[⏳✅❌]\s*/, "");
+    this.isWalletConnectError = options?.isWalletConnect ?? false;
 
     this.render();
     this.attachEventListeners();
@@ -1512,6 +1534,7 @@ class HotpotSwapWidget extends HTMLElement {
   private clearSwapStatus() {
     this.swapStatusType = "idle";
     this.swapStatusMessage = "";
+    this.isWalletConnectError = false;
     this.swapTxHash = null;
     this.intentIdForStatus = null;
     this.intentStatusFromApi = null;
