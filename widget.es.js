@@ -1,4 +1,4 @@
-import { h as p } from "./index-Crwdt6pm.mjs";
+import { h as p } from "./index-C3pND3kz.mjs";
 export {
   p as HotpotSwapWidget
 };
