@@ -107,13 +107,14 @@ export class BalanceService {
       return null;
 
     try {
+      const eth = window.ethereum as any;
       const decimals = token.decimals ?? 18;
 
       if (isEVMNative(token)) {
-        const hex = await window.ethereum.request({
+        const hex = (await eth.request({
           method: "eth_getBalance",
           params: [wallet.address, "latest"],
-        });
+        })) as string;
         const wei = BigInt(hex);
         return formatUnits(wei, decimals);
       }
@@ -121,7 +122,7 @@ export class BalanceService {
       const addr = token.address!;
       const client = createPublicClient({
         chain: { id: wallet.chainId ?? 1 } as any,
-        transport: custom(window.ethereum),
+        transport: custom(eth),
       });
 
       let decimalsToUse = token.decimals ?? 18;

@@ -1,6 +1,17 @@
 import { WalletType, WalletState } from '../types';
+import { connectEip155WithAppKit } from './appkit';
+
+function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent,
+  );
+}
 
 export class WalletManager {
+  private walletConnectProjectId?: string;
+
   private state: WalletState = {
     connected: false,
     address: null,
@@ -15,12 +26,17 @@ export class WalletManager {
     this.checkExistingConnection();
   }
 
+  public setWalletConnectProjectId(projectId?: string) {
+    this.walletConnectProjectId = projectId;
+  }
+
   private detectInjectedWallets() {
     // Check for injected Ethereum provider (MetaMask, etc)
     if (typeof window !== 'undefined' && window.ethereum) {
-      window.ethereum.on?.('accountsChanged', this.handleAccountsChanged.bind(this));
-      window.ethereum.on?.('chainChanged', this.handleChainChanged.bind(this));
-      window.ethereum.on?.('disconnect', this.handleDisconnect.bind(this));
+      const eth = window.ethereum as any;
+      eth.on?.('accountsChanged', this.handleAccountsChanged.bind(this));
+      eth.on?.('chainChanged', this.handleChainChanged.bind(this));
+      eth.on?.('disconnect', this.handleDisconnect.bind(this));
     }
 
     // Check for Tron provider
@@ -49,12 +65,13 @@ export class WalletManager {
     // Check if EVM wallet is already connected
     if (typeof window !== 'undefined' && window.ethereum) {
       try {
-        const accounts = await window.ethereum.request({
+        const eth = window.ethereum as any;
+        const accounts = await eth.request({
           method: 'eth_accounts', // This doesn't trigger popup, just checks
         });
 
         if (accounts && accounts.length > 0) {
-          const chainId = await window.ethereum.request({
+          const chainId = await eth.request({
             method: 'eth_chainId',
           });
 
@@ -110,30 +127,56 @@ export class WalletManager {
   }
 
   async connectEVM(): Promise<string> {
-    if (!window.ethereum) {
-      throw new Error('No Ethereum wallet found. Please install MetaMask.');
+    // 1) Try injected provider first (desktop, or mobile dapp browsers)
+    if (typeof window !== 'undefined' && window.ethereum) {
+      try {
+        const eth = window.ethereum as any;
+        const accounts = await eth.request({
+          method: 'eth_requestAccounts',
+        });
+
+        const chainId = await eth.request({
+          method: 'eth_chainId',
+        });
+
+        this.state = {
+          connected: true,
+          address: accounts[0],
+          chainId: parseInt(chainId, 16),
+          type: 'evm',
+        };
+
+        this.notifyListeners();
+        return accounts[0];
+      } catch (error) {
+        console.error('Failed to connect injected EVM wallet:', error);
+        throw error;
+      }
+    }
+
+    // 2) Fallback: AppKit (WalletConnect UX like rfq-web)
+    if (!this.walletConnectProjectId) {
+      throw new Error(
+        'No Ethereum wallet found. Please install MetaMask or configure WalletConnect project id.',
+      );
     }
 
     try {
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts',
-      });
-
-      const chainId = await window.ethereum.request({
-        method: 'eth_chainId',
-      });
+      const { address, chainId } = await connectEip155WithAppKit(
+        this.walletConnectProjectId,
+      );
 
       this.state = {
         connected: true,
-        address: accounts[0],
-        chainId: parseInt(chainId, 16),
+        address,
+        chainId,
         type: 'evm',
       };
 
       this.notifyListeners();
-      return accounts[0];
+      return address;
     } catch (error) {
-      console.error('Failed to connect EVM wallet:', error);
+      console.error('Failed to connect via AppKit:', error);
       throw error;
     }
   }
@@ -141,7 +184,26 @@ export class WalletManager {
   async connectPhantom(): Promise<string> {
     const provider = (window as any).phantom?.solana;
 
+    // No injected Phantom provider – on mobile пробуем открыть dapp в Phantom браузере
     if (!provider?.isPhantom) {
+      if (isMobileDevice() && typeof window !== 'undefined') {
+        const currentUrl = window.location.href;
+        const ref = window.location.origin;
+
+        // Официальный deeplink в Phantom dApp browser:
+        // https://phantom.app/ul/browse/<url>?ref=<ref>
+        const deeplink = `https://phantom.app/ul/browse/${encodeURIComponent(
+          currentUrl,
+        )}?ref=${encodeURIComponent(ref)}`;
+
+        // Перенаправляем пользователя в Phantom; дальнейшее подключение произойдёт уже внутри кошелька
+        window.location.href = deeplink;
+
+        throw new Error(
+          'Phantom wallet not detected. Opening this page in Phantom browser...',
+        );
+      }
+
       throw new Error('Phantom wallet not found. Please install Phantom.');
     }
 
@@ -168,6 +230,13 @@ export class WalletManager {
     const tronLink = (window as any).tronLink;
 
     if (!tronLink) {
+      // На мобильных подсказываем, что нужно открыть страницу в браузере TronLink
+      if (isMobileDevice() && typeof window !== 'undefined') {
+        throw new Error(
+          'Tron wallet not detected. Please open this page inside the TronLink mobile wallet browser or install TronLink.',
+        );
+      }
+
       throw new Error('No Tron wallet found. Please install TronLink.');
     }
 
@@ -272,9 +341,4 @@ export class WalletManager {
   }
 }
 
-// Extend Window interface for TypeScript
-declare global {
-  interface Window {
-    ethereum?: any;
-  }
-}
+// Window typings are declared in src/types/global.d.ts

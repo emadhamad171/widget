@@ -172,7 +172,7 @@ export class SwapService {
     const walletClient = createWalletClient({
       account: wallet.address as `0x${string}`,
       chain: { id: chainId } as any,
-      transport: custom(window.ethereum),
+      transport: custom(window.ethereum as any),
     });
 
     let signature: string;
@@ -244,7 +244,8 @@ export class SwapService {
       args: [spender as `0x${string}`, maxUint256],
     });
 
-    const txHash = await window.ethereum!.request({
+    const eth = window.ethereum as any;
+    const txHash = (await eth.request({
       method: "eth_sendTransaction",
       params: [
         {
@@ -254,7 +255,7 @@ export class SwapService {
           value: "0x0",
         },
       ],
-    });
+    })) as string;
 
     await this.waitForTransactionConfirmation(txHash as string, 60000);
   }
@@ -268,7 +269,8 @@ export class SwapService {
 
     while (Date.now() - start < maxWaitMs) {
       try {
-        const receipt = await window.ethereum!.request({
+        const eth = window.ethereum as any;
+        const receipt = await eth.request({
           method: "eth_getTransactionReceipt",
           params: [txHash],
         });
@@ -295,7 +297,8 @@ export class SwapService {
       args: [owner as `0x${string}`, spender as `0x${string}`],
     });
 
-    const result = await window.ethereum!.request({
+    const eth = window.ethereum as any;
+    const result = (await eth.request({
       method: "eth_call",
       params: [
         {
@@ -304,7 +307,7 @@ export class SwapService {
         },
         "latest",
       ],
-    });
+    })) as string;
 
     return BigInt(result as string);
   }
@@ -443,12 +446,6 @@ export class SwapService {
       }
       throw err;
     }
-  }
-}
-
-declare global {
-  interface Window {
-    ethereum?: any;
   }
 }
 

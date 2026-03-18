@@ -75,7 +75,8 @@ async function wrapEthereum(
     functionName: "deposit",
   });
 
-  const txHash = await window.ethereum.request({
+  const eth = window.ethereum as any;
+  const txHash = (await eth.request({
     method: "eth_sendTransaction",
     params: [
       {
@@ -85,7 +86,7 @@ async function wrapEthereum(
         value: toHex(amountWei),
       },
     ],
-  });
+  })) as string;
 
   await waitForEvmConfirmation(txHash as string);
   return txHash as string;
@@ -158,10 +159,11 @@ async function waitForEvmConfirmation(
   maxWaitMs = 120_000,
   pollMs = 3000
 ): Promise<void> {
+  const eth = window.ethereum as any;
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
     try {
-      const receipt = await window.ethereum!.request({
+      const receipt = await eth.request({
         method: "eth_getTransactionReceipt",
         params: [txHash],
       });

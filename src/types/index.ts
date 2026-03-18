@@ -24,6 +24,9 @@ export interface WidgetConfig {
   // UI
   swapDividerVariant?: "v1" | "v2"; // v1: circle, v2: pill (default)
 
+  // WalletConnect / mobile wallets
+  walletConnectProjectId?: string;
+
   // Callbacks
   onSwapSuccess?: (txHash: string) => void;
   onSwapError?: (error: Error) => void;

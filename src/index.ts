@@ -268,6 +268,7 @@ class HotpotSwapWidget extends HTMLElement {
       "swap-error-color",
       "swap-success-color",
       "swap-divider-variant",
+      "walletconnect-project-id",
     ];
   }
 
@@ -290,9 +291,16 @@ class HotpotSwapWidget extends HTMLElement {
       defaultSlippage: parseFloat(attr("default-slippage") || "0.5"),
       swapDividerVariant:
         (attr("swap-divider-variant") as "v1" | "v2") || "v2",
+      walletConnectProjectId: attr("walletconnect-project-id") || undefined,
     };
 
     this.slippage = this.config.defaultSlippage ?? 0.5;
+    if (this.config.walletConnectProjectId) {
+      // Pass projectId down to wallet manager for WalletConnect-based mobile flows
+      (this.walletManager as any)?.setWalletConnectProjectId?.(
+        this.config.walletConnectProjectId,
+      );
+    }
   }
 
   private render() {
