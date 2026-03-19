@@ -38,7 +38,7 @@ export const generateStyles = (config: WidgetConfig): string => {
 
   const dark = {
     backgroundColor: "#181818",
-    overlayBackgroundColor: "#1111114D",
+    overlayBackgroundColor: "#111111E5",
     cardBackgroundColor: "#1F1F1F",
     primaryTextColor: "#ffffff",
     secondaryTextColor: "rgba(255, 255, 255, 0.6)",
@@ -843,7 +843,6 @@ export const generateStyles = (config: WidgetConfig): string => {
     .slippage-btn.active {
       border-color: ${c.buttonColor};
       background: rgba(139, 92, 246, 0.25);
-      color: ${c.buttonColor};
     }
 
     .slippage-input {
@@ -925,8 +924,8 @@ export const generateStyles = (config: WidgetConfig): string => {
       box-shadow: 0 20px 80px rgba(15, 23, 42, 0.25);
       padding: 40px;
       top: 58px;
-      left: 35px;
-      right: 35px;
+      left: 30px;
+      right: 30px;
 
       position: absolute;
       text-align: center;
@@ -1253,7 +1252,10 @@ export const generateStyles = (config: WidgetConfig): string => {
 
     .token-selector-modal {
       background: ${c.backgroundColor};
-      border-radius: 20px;
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      border-bottom-left-radius: 10px;
+      border-bottom-right-radius: 10px;
       padding: 20px;
       width: calc(100% - 32px);
       max-width: calc(100% - 32px);
