@@ -195,7 +195,8 @@ export class BalanceService {
   ): Promise<string | null> {
     if (!wallet.address) return null;
 
-    const RPC = "https://api.mainnet-beta.solana.com";
+    // api.mainnet-beta.solana.com returns 403 from browsers (CORS). Use RPC that allows browser requests.
+    const RPC = "https://solana-rpc.publicnode.com";
 
     try {
       if (isSolanaNative(token)) {
