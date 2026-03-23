@@ -5,15 +5,25 @@ import axios from "axios";
 import { networksService, type NetworkInfo } from "./services/networks";
 import { generateStyles } from "./styles/theme";
 import type { WidgetConfig, WalletState, Token } from "./types";
-import { WalletManager } from "./services/wallet";
+import { WalletManager, isWalletRedirectError } from "./services/wallet";
 import { tokenService } from "./services/tokens";
-import { balanceService, getPreferredNetworkForWallet } from "./services/balance";
+import {
+  balanceService,
+  getPreferredNetworkForWallet,
+} from "./services/balance";
 import { priceService } from "./services/prices";
-import { needsWrapping, wrapNativeToken, getWrappedTokenSymbol } from "./services/wrapNative";
+import {
+  needsWrapping,
+  wrapNativeToken,
+  getWrappedTokenSymbol,
+} from "./services/wrapNative";
 import { hotpotApiClient } from "./services/api";
 import { quoteService } from "./services/quote";
 import { swapService } from "./services/swap";
-import { OBSERVED_ATTRIBUTES, parseWidgetAttributes } from "./config/widgetConfig";
+import {
+  OBSERVED_ATTRIBUTES,
+  parseWidgetAttributes,
+} from "./config/widgetConfig";
 import { renderHeader } from "./ui/renderHeader";
 import { renderConnectWalletModal } from "./ui/renderConnectWallet";
 import { renderTokenSelector } from "./ui/renderTokenSelector";
@@ -42,7 +52,7 @@ import {
   getWalletIconSmall,
 } from "./ui/helpers";
 
-const CONNECT_WALLET_TIMEOUT_MS = 10_000;
+const CONNECT_WALLET_TIMEOUT_MS = 30_000;
 
 class HotpotSwapWidget extends HTMLElement {
   private _shadowRoot: ShadowRoot;
@@ -78,7 +88,8 @@ class HotpotSwapWidget extends HTMLElement {
   private showDestinationAddressModal = false;
 
   // Swap status
-  private swapStatusType: "idle" | "loading" | "success" | "error" | "warning" = "idle";
+  private swapStatusType: "idle" | "loading" | "success" | "error" | "warning" =
+    "idle";
   private swapStatusMessage = "";
   private isWalletConnectError = false;
   private swapTxHash: string | null = null;
@@ -106,7 +117,8 @@ class HotpotSwapWidget extends HTMLElement {
         if (this.toTokenData) this.toTokenData.balance = null;
       } else {
         this.showDestinationAddress = true;
-        if (!this.destinationAddress) this.destinationAddress = state.address || "";
+        if (!this.destinationAddress)
+          this.destinationAddress = state.address || "";
         await this.ensureTokensMatchWallet();
         await this.fetchBalances();
       }
@@ -139,7 +151,9 @@ class HotpotSwapWidget extends HTMLElement {
     this.config = parseWidgetAttributes(this);
     this.slippage = this.config.defaultSlippage ?? 0.5;
     if (this.config.walletConnectProjectId) {
-      this.walletManager.setWalletConnectProjectId(this.config.walletConnectProjectId);
+      this.walletManager.setWalletConnectProjectId(
+        this.config.walletConnectProjectId,
+      );
     }
   }
 
@@ -165,12 +179,26 @@ class HotpotSwapWidget extends HTMLElement {
   private async ensureTokensMatchWallet() {
     const preferred = getPreferredNetworkForWallet(this.walletState);
     if (!preferred) return;
-    if (this.fromTokenData && this.fromTokenData.network?.toLowerCase() !== preferred.toLowerCase()) {
-      const alt = await tokenService.getTokenBySymbol(this.fromTokenData.symbol, undefined, preferred);
+    if (
+      this.fromTokenData &&
+      this.fromTokenData.network?.toLowerCase() !== preferred.toLowerCase()
+    ) {
+      const alt = await tokenService.getTokenBySymbol(
+        this.fromTokenData.symbol,
+        undefined,
+        preferred,
+      );
       if (alt) this.fromTokenData = alt;
     }
-    if (this.toTokenData && this.toTokenData.network?.toLowerCase() !== preferred.toLowerCase()) {
-      const alt = await tokenService.getTokenBySymbol(this.toTokenData.symbol, undefined, preferred);
+    if (
+      this.toTokenData &&
+      this.toTokenData.network?.toLowerCase() !== preferred.toLowerCase()
+    ) {
+      const alt = await tokenService.getTokenBySymbol(
+        this.toTokenData.symbol,
+        undefined,
+        preferred,
+      );
       if (alt) this.toTokenData = alt;
     }
   }
@@ -184,13 +212,24 @@ class HotpotSwapWidget extends HTMLElement {
     try {
       const isTron = this.walletState.type === "tron";
       if (this.fromTokenData) {
-        this.fromTokenData.balance = (await balanceService.getBalance(this.fromTokenData, this.walletState)) ?? undefined;
+        this.fromTokenData.balance =
+          (await balanceService.getBalance(
+            this.fromTokenData,
+            this.walletState,
+          )) ?? undefined;
         if (isTron) await new Promise((r) => setTimeout(r, 300));
       }
       if (this.toTokenData) {
-        this.toTokenData.balance = (await balanceService.getBalance(this.toTokenData, this.walletState)) ?? undefined;
+        this.toTokenData.balance =
+          (await balanceService.getBalance(
+            this.toTokenData,
+            this.walletState,
+          )) ?? undefined;
       }
-      await priceService.updateTokenFiatRates([this.fromTokenData, this.toTokenData]);
+      await priceService.updateTokenFiatRates([
+        this.fromTokenData,
+        this.toTokenData,
+      ]);
     } catch (e) {
       console.error("Failed to fetch balances:", e);
     } finally {
@@ -223,7 +262,12 @@ class HotpotSwapWidget extends HTMLElement {
     return q?.price_impact != null && q.price_impact < -1 ? "warning" : "idle";
   }
 
-  private getEffectiveSwapStatus(): "idle" | "loading" | "success" | "error" | "warning" {
+  private getEffectiveSwapStatus():
+    | "idle"
+    | "loading"
+    | "success"
+    | "error"
+    | "warning" {
     if (this.intentStatusFromApi != null) {
       const mapped = this.mapIntentStatusToSwapStatus(this.intentStatusFromApi);
       if (mapped) return mapped;
@@ -233,9 +277,18 @@ class HotpotSwapWidget extends HTMLElement {
     return this.getSwapStatusFromQuote();
   }
 
-  private mapIntentStatusToSwapStatus(s: IntentStatus): "loading" | "success" | "error" | null {
-    if (s === IntentStatus.Fulfilled || s === IntentStatus.Refunded) return "success";
-    if (s === IntentStatus.Declined || s === IntentStatus.DeclinedDueToKytCheck || s === IntentStatus.Expired || s === IntentStatus.Failed) return "error";
+  private mapIntentStatusToSwapStatus(
+    s: IntentStatus,
+  ): "loading" | "success" | "error" | null {
+    if (s === IntentStatus.Fulfilled || s === IntentStatus.Refunded)
+      return "success";
+    if (
+      s === IntentStatus.Declined ||
+      s === IntentStatus.DeclinedDueToKytCheck ||
+      s === IntentStatus.Expired ||
+      s === IntentStatus.Failed
+    )
+      return "error";
     return "loading";
   }
 
@@ -245,24 +298,45 @@ class HotpotSwapWidget extends HTMLElement {
 
   private renderSwapDividerContent(): string {
     const status = this.getEffectiveSwapStatus();
-    if (status === "loading") return `<div class="swap-divider-status swap-divider-loading">${renderLoaderSvg(isDarkTheme(this.config.theme))}</div>`;
-    if (status === "error") return `<div class="swap-divider-status swap-divider-error">${EXCLAMATION_ERROR_RAW}</div>`;
-    if (status === "warning") return `<div class="swap-divider-status swap-divider-warning">${EXCLAMATION_WARNING_RAW}</div>`;
-    if (status === "success") return `<div class="swap-divider-status swap-divider-success">${EXCLAMATION_SUCCESS_RAW}</div>`;
+    if (status === "loading")
+      return `<div class="swap-divider-status swap-divider-loading">${renderLoaderSvg(isDarkTheme(this.config.theme))}</div>`;
+    if (status === "error")
+      return `<div class="swap-divider-status swap-divider-error">${EXCLAMATION_ERROR_RAW}</div>`;
+    if (status === "warning")
+      return `<div class="swap-divider-status swap-divider-warning">${EXCLAMATION_WARNING_RAW}</div>`;
+    if (status === "success")
+      return `<div class="swap-divider-status swap-divider-success">${EXCLAMATION_SUCCESS_RAW}</div>`;
     return `<button class="swap-reverse-button" id="reverse-btn" aria-label="Swap direction">${SWAP_ICON_SVG}</button>`;
   }
 
   private renderSwapStatusToast(): string {
     const status = this.getEffectiveSwapStatus();
-    const priceImpact = (this.currentQuote as { price_impact?: number } | null)?.price_impact;
-    if (status === "idle" || (!this.isSwapping && this.fromAmount.trim() === "")) return "";
+    const priceImpact = (this.currentQuote as { price_impact?: number } | null)
+      ?.price_impact;
+    if (
+      status === "idle" ||
+      (!this.isSwapping && this.fromAmount.trim() === "")
+    )
+      return "";
     let text = "";
     let iconSvg = "";
-    if (status === "loading") { text = this.swapStatusMessage || "Processing..."; }
-    else if (status === "success") { text = "Transaction successful"; iconSvg = ICON_SUCCESS_RAW; }
-    else if (status === "error") { text = this.isWalletConnectError ? (this.swapStatusMessage || "Connection failed") : "Transaction failed"; iconSvg = EXCLAMATION_ERROR_RAW; }
-    else if (status === "warning" && priceImpact != null) { text = `Token price is below the market ${priceImpact}%`; iconSvg = ICON_WARNING_RAW; }
-    const explorerUrl = this.swapTxHash ? this.getExplorerUrl(this.swapTxHash) : null;
+    if (status === "loading") {
+      text = this.swapStatusMessage || "Processing...";
+    } else if (status === "success") {
+      text = "Transaction successful";
+      iconSvg = ICON_SUCCESS_RAW;
+    } else if (status === "error") {
+      text = this.isWalletConnectError
+        ? this.swapStatusMessage || "Connection failed"
+        : "Transaction failed";
+      iconSvg = EXCLAMATION_ERROR_RAW;
+    } else if (status === "warning" && priceImpact != null) {
+      text = `Token price is below the market ${priceImpact}%`;
+      iconSvg = ICON_WARNING_RAW;
+    }
+    const explorerUrl = this.swapTxHash
+      ? this.getExplorerUrl(this.swapTxHash)
+      : null;
     return `
       <div class="swap-status-toast swap-status-toast-${status}">
         <div class="swap-status-toast-row">
@@ -275,7 +349,11 @@ class HotpotSwapWidget extends HTMLElement {
   }
 
   private getDisplayFromSymbol(): string {
-    if (this.displayFromTokenAsWrapped && this.fromTokenData && needsWrapping(this.fromTokenData)) {
+    if (
+      this.displayFromTokenAsWrapped &&
+      this.fromTokenData &&
+      needsWrapping(this.fromTokenData)
+    ) {
       return getWrappedTokenSymbol(this.fromTokenData.symbol);
     }
     return this.fromTokenData?.symbol || "Select";
@@ -283,10 +361,26 @@ class HotpotSwapWidget extends HTMLElement {
 
   private renderSwapForm(): string {
     const fromSymbol = this.getDisplayFromSymbol();
-    const fromBal = formatBalance(this.fromTokenData?.balance, this.isBalanceLoading, this.walletState.connected, !!this.fromTokenData);
-    const toBal = formatBalance(this.toTokenData?.balance, this.isBalanceLoading, this.walletState.connected, !!this.toTokenData);
-    const fromUsd = formatUsd(parseFloat(fromBal) || 0, this.fromTokenData?.fiatRate ?? 0);
-    const toUsd = formatUsd(parseFloat(toBal) || 0, this.toTokenData?.fiatRate ?? 0);
+    const fromBal = formatBalance(
+      this.fromTokenData?.balance,
+      this.isBalanceLoading,
+      this.walletState.connected,
+      !!this.fromTokenData,
+    );
+    const toBal = formatBalance(
+      this.toTokenData?.balance,
+      this.isBalanceLoading,
+      this.walletState.connected,
+      !!this.toTokenData,
+    );
+    const fromUsd = formatUsd(
+      parseFloat(fromBal) || 0,
+      this.fromTokenData?.fiatRate ?? 0,
+    );
+    const toUsd = formatUsd(
+      parseFloat(toBal) || 0,
+      this.toTokenData?.fiatRate ?? 0,
+    );
 
     return `
       <div class="swap-form">
@@ -336,13 +430,17 @@ class HotpotSwapWidget extends HTMLElement {
             <span class="destination-label">Destination address<span class="destination-info-wrap">${INFO_ICON_SVG}<span class="destination-info-tooltip">Enter the address where you want to receive swapped tokens</span></span></span>
             <span class="destination-chevron ${this.showDestinationAddress ? "expanded" : ""}">${CHEVRON_ICON_SVG}</span>
           </button>
-          ${this.showDestinationAddress ? `
+          ${
+            this.showDestinationAddress
+              ? `
           <div class="destination-address-input-wrap">
             ${this.destinationAddress ? `<span class="destination-wallet-icon">${getWalletIconSmall(this.walletState.type)}</span>` : ""}
             <input type="text" class="destination-address-input${this.destinationAddress ? " destination-address-input--filled" : ""}" id="destination-input" value="${this.destinationAddress}" autocomplete="off" />
             ${this.destinationAddress ? `<button class="destination-clear-btn" id="destination-clear-btn">Clear</button>` : `<button class="destination-set-btn" id="destination-set-btn">Set address</button>`}
           </div>
-          ` : ""}
+          `
+              : ""
+          }
         </div>
         ${this.renderDestinationAddressModal()}
         <button class="swap-button${this.getSwapButtonText() === "Enter Amount" ? " swap-button--enter-amount" : ""}" id="swap-btn" ${this.swapStatusType === "error" ? "" : this.isLoadingQuote || this.isSwapping || (this.walletState.connected && !(this.destinationAddress || "").trim()) ? "disabled" : ""}>
@@ -384,7 +482,8 @@ class HotpotSwapWidget extends HTMLElement {
     if (!this.showDestinationAddressModal) return "";
     if (!this.walletState.connected || !this.walletState.address) return "";
     const addr = this.walletState.address;
-    const fmt = (a: string) => (a.length > 16 ? `${a.slice(0, 6)}...${a.slice(-6)}` : a);
+    const fmt = (a: string) =>
+      a.length > 16 ? `${a.slice(0, 6)}...${a.slice(-6)}` : a;
     return `
       <div class="destination-modal-overlay">
         <div class="destination-modal">
@@ -404,8 +503,10 @@ class HotpotSwapWidget extends HTMLElement {
     if (this.isSwapping) return "Swapping...";
     if (this.isLoadingQuote) return "Loading...";
     if (!this.walletState.connected) return "Connect Wallet";
-    if (!(this.destinationAddress || "").trim()) return "Enter destination address";
-    if (!this.fromAmount || parseFloat(this.fromAmount) === 0) return "Enter Amount";
+    if (!(this.destinationAddress || "").trim())
+      return "Enter destination address";
+    if (!this.fromAmount || parseFloat(this.fromAmount) === 0)
+      return "Enter Amount";
     return "Swap";
   }
 
@@ -429,15 +530,19 @@ class HotpotSwapWidget extends HTMLElement {
     });
 
     // Connect wallet modal close / overlay
-    $("close-connect-wallet-btn")?.addEventListener("click", () => this.closeConnectWalletModal());
+    $("close-connect-wallet-btn")?.addEventListener("click", () =>
+      this.closeConnectWalletModal(),
+    );
     $("connect-wallet-overlay")?.addEventListener("click", (e) => {
-      if (e.target === $("connect-wallet-overlay")) this.closeConnectWalletModal();
+      if (e.target === $("connect-wallet-overlay"))
+        this.closeConnectWalletModal();
     });
 
     // Connect wallet items
     this._shadowRoot.querySelectorAll(".connect-wallet-item").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
-        const type = (e.currentTarget as HTMLButtonElement).dataset.walletType as "evm" | "tron" | "solana";
+        const type = (e.currentTarget as HTMLButtonElement).dataset
+          .walletType as "evm" | "tron" | "solana";
         if (!type || this.isConnectingWallet) return;
         this.isConnectingWallet = true;
         this.startConnectWalletTimeout();
@@ -451,11 +556,31 @@ class HotpotSwapWidget extends HTMLElement {
         } catch (err) {
           this.clearConnectWalletTimeout();
           console.error("Wallet connect failed:", err);
-          const msg = err instanceof Error ? err.message || "" : typeof err === "string" ? err : "";
+
+          if (isWalletRedirectError(err)) {
+            this.showConnectWalletModal = false;
+            return;
+          }
+
+          const msg =
+            err instanceof Error
+              ? err.message || ""
+              : typeof err === "string"
+                ? err
+                : "";
           const lower = msg.toLowerCase();
-          const isUserRejected = (err as any)?.code === 4001 || lower.includes("rejected") || lower.includes("user cancelled") || lower.includes("user canceled") || lower.includes("user denied");
+          const isUserRejected =
+            (err as any)?.code === 4001 ||
+            lower.includes("rejected") ||
+            lower.includes("user cancelled") ||
+            lower.includes("user canceled") ||
+            lower.includes("user denied");
           if (!isUserRejected) {
-            this.showSwapStatusModal("error", msg || "Failed to connect wallet", { isWalletConnect: true });
+            this.showSwapStatusModal(
+              "error",
+              msg || "Failed to connect wallet",
+              { isWalletConnect: true },
+            );
           }
         } finally {
           this.isConnectingWallet = false;
@@ -468,23 +593,35 @@ class HotpotSwapWidget extends HTMLElement {
     // Slippage
     this._shadowRoot.querySelectorAll(".slippage-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
-        this.slippage = parseFloat((e.target as HTMLButtonElement).dataset.value || "0.5");
+        this.slippage = parseFloat(
+          (e.target as HTMLButtonElement).dataset.value || "0.5",
+        );
         this.render();
         this.attachEventListeners();
       });
     });
-    (this._shadowRoot.querySelector(".slippage-input") as HTMLInputElement)?.addEventListener("input", (e) => {
-      const num = parseFloat((e.target as HTMLInputElement).value.replace(/%/g, "").trim());
+    (
+      this._shadowRoot.querySelector(".slippage-input") as HTMLInputElement
+    )?.addEventListener("input", (e) => {
+      const num = parseFloat(
+        (e.target as HTMLInputElement).value.replace(/%/g, "").trim(),
+      );
       if (!isNaN(num) && num >= 0 && num <= 50) this.slippage = num;
     });
 
     // Reverse
     $("reverse-btn")?.addEventListener("click", () => {
-      [this.fromTokenData, this.toTokenData] = [this.toTokenData, this.fromTokenData];
+      [this.fromTokenData, this.toTokenData] = [
+        this.toTokenData,
+        this.fromTokenData,
+      ];
       [this.fromAmount, this.toAmount] = [this.toAmount, this.fromAmount];
       this.fetchBalances();
       if (this.fromAmount) this.fetchQuoteDebounced();
-      else { this.render(); this.attachEventListeners(); }
+      else {
+        this.render();
+        this.attachEventListeners();
+      }
     });
 
     // Amount input
@@ -495,8 +632,14 @@ class HotpotSwapWidget extends HTMLElement {
     });
 
     // Token selector buttons
-    $("from-token-btn")?.addEventListener("click", () => { this.tokenSelectorMode = "from"; this.openTokenSelector(); });
-    $("to-token-btn")?.addEventListener("click", () => { this.tokenSelectorMode = "to"; this.openTokenSelector(); });
+    $("from-token-btn")?.addEventListener("click", () => {
+      this.tokenSelectorMode = "from";
+      this.openTokenSelector();
+    });
+    $("to-token-btn")?.addEventListener("click", () => {
+      this.tokenSelectorMode = "to";
+      this.openTokenSelector();
+    });
 
     // Destination address
     $("destination-toggle")?.addEventListener("click", () => {
@@ -504,14 +647,21 @@ class HotpotSwapWidget extends HTMLElement {
       this.render();
       this.attachEventListeners();
     });
-    ($("destination-input") as HTMLInputElement)?.addEventListener("input", (e) => {
-      this.destinationAddress = (e.target as HTMLInputElement).value;
-      const swapBtn = $("swap-btn") as HTMLButtonElement;
-      if (swapBtn) {
-        swapBtn.disabled = this.isLoadingQuote || this.isSwapping || (this.walletState.connected && !(this.destinationAddress || "").trim());
-        swapBtn.textContent = this.getSwapButtonText();
-      }
-    });
+    ($("destination-input") as HTMLInputElement)?.addEventListener(
+      "input",
+      (e) => {
+        this.destinationAddress = (e.target as HTMLInputElement).value;
+        const swapBtn = $("swap-btn") as HTMLButtonElement;
+        if (swapBtn) {
+          swapBtn.disabled =
+            this.isLoadingQuote ||
+            this.isSwapping ||
+            (this.walletState.connected &&
+              !(this.destinationAddress || "").trim());
+          swapBtn.textContent = this.getSwapButtonText();
+        }
+      },
+    );
     $("destination-set-btn")?.addEventListener("click", () => {
       if (!this.walletState.connected) this.showConnectWalletModal = true;
       else this.showDestinationAddressModal = !this.showDestinationAddressModal;
@@ -523,44 +673,65 @@ class HotpotSwapWidget extends HTMLElement {
       this.render();
       this.attachEventListeners();
     });
-    this._shadowRoot.querySelectorAll(".destination-modal-item").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        this.destinationAddress = (e.currentTarget as HTMLButtonElement).dataset.address || "";
-        this.showDestinationAddressModal = false;
-        this.render();
-        this.attachEventListeners();
+    this._shadowRoot
+      .querySelectorAll(".destination-modal-item")
+      .forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          this.destinationAddress =
+            (e.currentTarget as HTMLButtonElement).dataset.address || "";
+          this.showDestinationAddressModal = false;
+          this.render();
+          this.attachEventListeners();
+        });
       });
-    });
 
     // Token selector
-    $("close-token-selector-btn")?.addEventListener("click", () => this.closeTokenSelector());
-    $("token-selector-overlay")?.addEventListener("click", (e) => { if (e.target === $("token-selector-overlay")) this.closeTokenSelector(); });
-    ($("token-search-input") as HTMLInputElement)?.addEventListener("input", (e) => {
-      const q = (e.target as HTMLInputElement).value;
-      this.tokenSearchQuery = q;
-      if (this.tokenSearchDebounceTimer) clearTimeout(this.tokenSearchDebounceTimer);
-      this.tokenSearchDebounceTimer = window.setTimeout(async () => {
-        this.tokenSearchDebounceTimer = null;
-        await this.loadTokenList(q);
-        this.render();
-        this.attachEventListeners();
-        (this._shadowRoot.getElementById("token-search-input") as HTMLInputElement)?.focus();
-      }, 1000);
+    $("close-token-selector-btn")?.addEventListener("click", () =>
+      this.closeTokenSelector(),
+    );
+    $("token-selector-overlay")?.addEventListener("click", (e) => {
+      if (e.target === $("token-selector-overlay")) this.closeTokenSelector();
     });
-    this._shadowRoot.querySelectorAll(".networks-list__item[data-network]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const network = (btn as HTMLElement).dataset.network;
-        if (!network) return;
-        this.tokenFilterNetwork = network;
-        await this.loadTokenList(this.tokenSearchQuery, network);
-        this.render();
-        this.attachEventListeners();
+    ($("token-search-input") as HTMLInputElement)?.addEventListener(
+      "input",
+      (e) => {
+        const q = (e.target as HTMLInputElement).value;
+        this.tokenSearchQuery = q;
+        if (this.tokenSearchDebounceTimer)
+          clearTimeout(this.tokenSearchDebounceTimer);
+        this.tokenSearchDebounceTimer = window.setTimeout(async () => {
+          this.tokenSearchDebounceTimer = null;
+          await this.loadTokenList(q);
+          this.render();
+          this.attachEventListeners();
+          (
+            this._shadowRoot.getElementById(
+              "token-search-input",
+            ) as HTMLInputElement
+          )?.focus();
+        }, 1000);
+      },
+    );
+    this._shadowRoot
+      .querySelectorAll(".networks-list__item[data-network]")
+      .forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const network = (btn as HTMLElement).dataset.network;
+          if (!network) return;
+          this.tokenFilterNetwork = network;
+          await this.loadTokenList(this.tokenSearchQuery, network);
+          this.render();
+          this.attachEventListeners();
+        });
       });
-    });
     this._shadowRoot.querySelectorAll(".token-list-item").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         const target = e.currentTarget as HTMLElement;
-        const token = this.tokenList.find((t) => t.symbol === target.dataset.tokenSymbol && t.network === target.dataset.tokenNetwork);
+        const token = this.tokenList.find(
+          (t) =>
+            t.symbol === target.dataset.tokenSymbol &&
+            t.network === target.dataset.tokenNetwork,
+        );
         if (token) this.selectToken(token);
         this.closeTokenSelector();
       });
@@ -568,8 +739,11 @@ class HotpotSwapWidget extends HTMLElement {
 
     // Swap button
     $("swap-btn")?.addEventListener("click", () => {
-      if (!this.walletState.connected) { this.showConnectWalletModal = true; this.render(); this.attachEventListeners(); }
-      else this.handleSwap();
+      if (!this.walletState.connected) {
+        this.showConnectWalletModal = true;
+        this.render();
+        this.attachEventListeners();
+      } else this.handleSwap();
     });
 
     // Transaction modal primary button
@@ -637,23 +811,44 @@ class HotpotSwapWidget extends HTMLElement {
   private async loadTokenList(query: string, network?: string) {
     this.isTokenListLoading = true;
     try {
-      this.tokenList = await tokenService.searchTokens(query, network ?? this.tokenFilterNetwork);
-    } catch { this.tokenList = []; }
-    finally { this.isTokenListLoading = false; }
+      this.tokenList = await tokenService.searchTokens(
+        query,
+        network ?? this.tokenFilterNetwork,
+      );
+    } catch {
+      this.tokenList = [];
+    } finally {
+      this.isTokenListLoading = false;
+    }
   }
 
   private selectToken(token: Token) {
-    const other = this.tokenSelectorMode === "from" ? this.toTokenData : this.fromTokenData;
-    if (other && token.symbol === other.symbol && token.network === other.network) {
-      [this.fromTokenData, this.toTokenData] = [this.toTokenData, this.fromTokenData];
-    } else if (this.tokenSelectorMode === "from") { this.fromTokenData = token; }
-    else { this.toTokenData = token; }
+    const other =
+      this.tokenSelectorMode === "from" ? this.toTokenData : this.fromTokenData;
+    if (
+      other &&
+      token.symbol === other.symbol &&
+      token.network === other.network
+    ) {
+      [this.fromTokenData, this.toTokenData] = [
+        this.toTokenData,
+        this.fromTokenData,
+      ];
+    } else if (this.tokenSelectorMode === "from") {
+      this.fromTokenData = token;
+    } else {
+      this.toTokenData = token;
+    }
     this.fromAmount = "";
     this.toAmount = "";
     this.currentQuote = null;
     this.fetchBalances();
-    if (this.fromTokenData && this.toTokenData && this.fromAmount) this.fetchQuoteDebounced();
-    else { this.render(); this.attachEventListeners(); }
+    if (this.fromTokenData && this.toTokenData && this.fromAmount)
+      this.fetchQuoteDebounced();
+    else {
+      this.render();
+      this.attachEventListeners();
+    }
   }
 
   // ── Quote ──────────────────────────────────────────────────
@@ -671,32 +866,62 @@ class HotpotSwapWidget extends HTMLElement {
   }
 
   private async fetchQuote() {
-    if (!this.fromTokenData || !this.toTokenData || !this.fromAmount) { this.isLoadingQuote = false; return; }
+    if (!this.fromTokenData || !this.toTokenData || !this.fromAmount) {
+      this.isLoadingQuote = false;
+      return;
+    }
     try {
       this.isLoadingQuote = true;
-      const quote = await quoteService.getQuote(this.fromTokenData, this.toTokenData, this.fromAmount, this.slippage);
-      if (quote) { this.currentQuote = quote; this.toAmount = quoteService.calculateOutputAmount(quote); }
-    } catch { this.toAmount = "0"; }
-    finally { this.isLoadingQuote = false; this.render(); this.attachEventListeners(); }
+      const quote = await quoteService.getQuote(
+        this.fromTokenData,
+        this.toTokenData,
+        this.fromAmount,
+        this.slippage,
+      );
+      if (quote) {
+        this.currentQuote = quote;
+        this.toAmount = quoteService.calculateOutputAmount(quote);
+      }
+    } catch {
+      this.toAmount = "0";
+    } finally {
+      this.isLoadingQuote = false;
+      this.render();
+      this.attachEventListeners();
+    }
   }
 
   // ── Swap ───────────────────────────────────────────────────
 
   private async handleSwap() {
     if (!this.fromTokenData || !this.toTokenData || !this.currentQuote) {
-      this.showSwapStatusModal("error", "Please enter an amount and get a quote first"); return;
+      this.showSwapStatusModal(
+        "error",
+        "Please enter an amount and get a quote first",
+      );
+      return;
     }
     if (!this.fromAmount || parseFloat(this.fromAmount) === 0) {
-      this.showSwapStatusModal("error", "Please enter a valid amount"); return;
+      this.showSwapStatusModal("error", "Please enter a valid amount");
+      return;
     }
     const dest = (this.destinationAddress || "").trim();
-    if (!dest) { this.showSwapStatusModal("error", "Please enter destination address"); return; }
+    if (!dest) {
+      this.showSwapStatusModal("error", "Please enter destination address");
+      return;
+    }
 
     try {
       this.isSwapping = true;
       this.showSwapStatusModal("loading", "Refreshing quote...");
-      const freshQuote = await quoteService.getQuote(this.fromTokenData, this.toTokenData, this.fromAmount, this.slippage);
-      if (!freshQuote) throw new Error("Could not get a fresh quote. Please try again.");
+      const freshQuote = await quoteService.getQuote(
+        this.fromTokenData,
+        this.toTokenData,
+        this.fromAmount,
+        this.slippage,
+      );
+      if (!freshQuote)
+        throw new Error("Could not get a fresh quote. Please try again.");
 
       let effectiveFromToken = this.fromTokenData;
       let quoteToUse = freshQuote;
@@ -704,27 +929,56 @@ class HotpotSwapWidget extends HTMLElement {
       if (needsWrapping(this.fromTokenData)) {
         this.displayFromTokenAsWrapped = true;
         this.showSwapStatusModal("loading", "Wrapping native token...");
-        await wrapNativeToken(this.fromTokenData, this.walletState, this.fromAmount);
+        await wrapNativeToken(
+          this.fromTokenData,
+          this.walletState,
+          this.fromAmount,
+        );
         this.render();
         this.attachEventListeners();
-        effectiveFromToken = { ...this.fromTokenData, address: this.fromTokenData.wrapped_token_address!, symbol: getWrappedTokenSymbol(this.fromTokenData.symbol), name: `Wrapped ${this.fromTokenData.symbol}` };
+        effectiveFromToken = {
+          ...this.fromTokenData,
+          address: this.fromTokenData.wrapped_token_address!,
+          symbol: getWrappedTokenSymbol(this.fromTokenData.symbol),
+          name: `Wrapped ${this.fromTokenData.symbol}`,
+        };
         this.showSwapStatusModal("loading", "Refreshing quote...");
-        const quoteAfterWrap = await quoteService.getQuote(effectiveFromToken, this.toTokenData, this.fromAmount, this.slippage);
-        if (quoteAfterWrap) { quoteToUse = quoteAfterWrap; this.currentQuote = quoteAfterWrap; this.toAmount = quoteService.calculateOutputAmount(quoteAfterWrap); }
+        const quoteAfterWrap = await quoteService.getQuote(
+          effectiveFromToken,
+          this.toTokenData,
+          this.fromAmount,
+          this.slippage,
+        );
+        if (quoteAfterWrap) {
+          quoteToUse = quoteAfterWrap;
+          this.currentQuote = quoteAfterWrap;
+          this.toAmount = quoteService.calculateOutputAmount(quoteAfterWrap);
+        }
       } else {
         this.currentQuote = freshQuote;
         this.toAmount = quoteService.calculateOutputAmount(freshQuote);
       }
 
       this.showSwapStatusModal("loading", "Preparing swap...");
-      const intentId = await swapService.executeSwap({ fromToken: effectiveFromToken, toToken: this.toTokenData, amount: this.fromAmount, quote: quoteToUse, wallet: this.walletState, slippage: this.slippage, destinationAddress: this.destinationAddress });
+      const intentId = await swapService.executeSwap({
+        fromToken: effectiveFromToken,
+        toToken: this.toTokenData,
+        amount: this.fromAmount,
+        quote: quoteToUse,
+        wallet: this.walletState,
+        slippage: this.slippage,
+        destinationAddress: this.destinationAddress,
+      });
       this.swapTxHash = intentId;
       this.showSwapStatusModal("loading", "Processing swap...");
       this.startIntentStatusPolling(intentId);
       this.config.onSwapSuccess?.(intentId);
     } catch (error: any) {
       console.error("Swap failed:", error);
-      this.showSwapStatusModal("error", `Swap failed: ${this.getErrorMessage(error)}`);
+      this.showSwapStatusModal(
+        "error",
+        `Swap failed: ${this.getErrorMessage(error)}`,
+      );
       this.config.onSwapError?.(error);
     }
   }
@@ -735,7 +989,13 @@ class HotpotSwapWidget extends HTMLElement {
         const data = error.response.data as Record<string, unknown>;
         if (typeof data.message === "string") return data.message;
         if (typeof data.detail === "string") return data.detail;
-        if (Array.isArray(data.detail)) { const msg = (data.detail as Array<{ msg?: string }>).map((d) => d.msg).filter(Boolean).join("; "); if (msg) return msg; }
+        if (Array.isArray(data.detail)) {
+          const msg = (data.detail as Array<{ msg?: string }>)
+            .map((d) => d.msg)
+            .filter(Boolean)
+            .join("; ");
+          if (msg) return msg;
+        }
       }
       return error.message;
     }
@@ -744,7 +1004,11 @@ class HotpotSwapWidget extends HTMLElement {
 
   // ── Swap status modal helpers ──────────────────────────────
 
-  private showSwapStatusModal(type: "loading" | "success" | "error", message: string, options?: { isWalletConnect?: boolean }) {
+  private showSwapStatusModal(
+    type: "loading" | "success" | "error",
+    message: string,
+    options?: { isWalletConnect?: boolean },
+  ) {
     this.swapStatusType = type;
     this.swapStatusMessage = message.replace(/^[⏳✅❌]\s*/, "");
     this.isWalletConnectError = options?.isWalletConnect ?? false;
@@ -766,11 +1030,22 @@ class HotpotSwapWidget extends HTMLElement {
 
   // ── Intent status polling ──────────────────────────────────
 
-  private readonly INTENT_STATUS_SUCCESS = new Set([IntentStatus.Fulfilled, IntentStatus.Refunded]);
-  private readonly INTENT_STATUS_FAILED = new Set([IntentStatus.Declined, IntentStatus.DeclinedDueToKytCheck, IntentStatus.Expired, IntentStatus.Failed]);
+  private readonly INTENT_STATUS_SUCCESS = new Set([
+    IntentStatus.Fulfilled,
+    IntentStatus.Refunded,
+  ]);
+  private readonly INTENT_STATUS_FAILED = new Set([
+    IntentStatus.Declined,
+    IntentStatus.DeclinedDueToKytCheck,
+    IntentStatus.Expired,
+    IntentStatus.Failed,
+  ]);
 
   private stopIntentStatusPolling() {
-    if (this.intentStatusPollTimer != null) { clearInterval(this.intentStatusPollTimer); this.intentStatusPollTimer = null; }
+    if (this.intentStatusPollTimer != null) {
+      clearInterval(this.intentStatusPollTimer);
+      this.intentStatusPollTimer = null;
+    }
   }
 
   private startIntentStatusPolling(intentId: string) {
@@ -779,15 +1054,30 @@ class HotpotSwapWidget extends HTMLElement {
     this.intentStatusPollStartedAt = Date.now();
     const poll = async () => {
       if (!this.intentIdForStatus) return;
-      if (Date.now() - this.intentStatusPollStartedAt > 5 * 60 * 1000) { this.stopIntentStatusPolling(); return; }
+      if (Date.now() - this.intentStatusPollStartedAt > 5 * 60 * 1000) {
+        this.stopIntentStatusPolling();
+        return;
+      }
       try {
-        const status = await hotpotApiClient.getIntentStatus(this.intentIdForStatus);
+        const status = await hotpotApiClient.getIntentStatus(
+          this.intentIdForStatus,
+        );
         this.intentStatusFromApi = status;
-        if (this.INTENT_STATUS_SUCCESS.has(status)) { this.swapStatusType = "success"; this.swapStatusMessage = "Transaction successful"; this.stopIntentStatusPolling(); this.fetchBalances(); }
-        else if (this.INTENT_STATUS_FAILED.has(status)) { this.swapStatusType = "error"; this.swapStatusMessage = "Transaction failed"; this.stopIntentStatusPolling(); }
+        if (this.INTENT_STATUS_SUCCESS.has(status)) {
+          this.swapStatusType = "success";
+          this.swapStatusMessage = "Transaction successful";
+          this.stopIntentStatusPolling();
+          this.fetchBalances();
+        } else if (this.INTENT_STATUS_FAILED.has(status)) {
+          this.swapStatusType = "error";
+          this.swapStatusMessage = "Transaction failed";
+          this.stopIntentStatusPolling();
+        }
         this.render();
         this.attachEventListeners();
-      } catch (e) { console.error("Intent status poll failed:", e); }
+      } catch (e) {
+        console.error("Intent status poll failed:", e);
+      }
     };
     poll();
     this.intentStatusPollTimer = window.setInterval(poll, 3000);
