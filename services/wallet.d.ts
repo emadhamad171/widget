@@ -1,8 +1,12 @@
 import { WalletType, WalletState } from '../types';
+export declare const WALLET_REDIRECT_ERROR_CODE = "WALLET_REDIRECT";
+export declare function isWalletRedirectError(error: unknown): boolean;
 export declare class WalletManager {
+    private walletConnectProjectId?;
     private state;
     private listeners;
     constructor();
+    setWalletConnectProjectId(projectId?: string): void;
     private detectInjectedWallets;
     private handlePhantomDisconnect;
     private checkExistingConnection;
@@ -19,10 +23,5 @@ export declare class WalletManager {
     private handleAccountsChanged;
     private handleChainChanged;
     private handleDisconnect;
-}
-declare global {
-    interface Window {
-        ethereum?: any;
-    }
 }
 //# sourceMappingURL=wallet.d.ts.map

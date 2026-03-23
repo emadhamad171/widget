@@ -1,5 +1,5 @@
-import { h as p } from "./index-Crwdt6pm.mjs";
+import { fa as a } from "./index-DIokOUOA.mjs";
 export {
-  p as HotpotSwapWidget
+  a as HotpotSwapWidget
 };
 //# sourceMappingURL=widget.es.js.map
