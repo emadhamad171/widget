@@ -1,4 +1,4 @@
-import { fa as a } from "./index-DIokOUOA.mjs";
+import { fa as a } from "./index-BC7prOFq.mjs";
 export {
   a as HotpotSwapWidget
 };
