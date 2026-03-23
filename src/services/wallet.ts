@@ -259,10 +259,21 @@ export class WalletManager {
     const tronLink = (window as any).tronLink;
 
     if (!tronLink) {
-      // На мобильных подсказываем, что нужно открыть страницу в браузере TronLink
+      // On mobile, use official TronLink deep link to open this dApp in-app.
       if (isMobileDevice() && typeof window !== "undefined") {
-        throw new Error(
-          "Tron wallet not detected. Please open this page inside the TronLink mobile wallet browser or install TronLink.",
+        const currentUrl = window.location.href;
+        const deepLinkPayload = {
+          url: currentUrl,
+          action: "open",
+          protocol: "tronlink",
+          version: "1.0",
+        };
+        const encodedParam = encodeURIComponent(JSON.stringify(deepLinkPayload));
+        const deeplink = `tronlinkoutside://pull.activity?param=${encodedParam}`;
+        window.location.href = deeplink;
+
+        throw createWalletRedirectError(
+          "TronLink is opening this page in its in-app browser...",
         );
       }
 

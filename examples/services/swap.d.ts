@@ -24,10 +24,5 @@ export declare class SwapService {
     private approveTronTokenIfNeeded;
     private executeTronCosign;
 }
-declare global {
-    interface Window {
-        ethereum?: any;
-    }
-}
 export declare const swapService: SwapService;
 //# sourceMappingURL=swap.d.ts.map

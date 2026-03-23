@@ -14,6 +14,7 @@ export interface WidgetConfig {
     defaultToToken?: string;
     defaultSlippage?: number;
     swapDividerVariant?: "v1" | "v2";
+    walletConnectProjectId?: string;
     onSwapSuccess?: (txHash: string) => void;
     onSwapError?: (error: Error) => void;
     onWalletConnect?: (address: string) => void;
