@@ -23,6 +23,12 @@ export declare class SwapService {
     private readonly TRC20_ABI;
     private approveTronTokenIfNeeded;
     private executeTronCosign;
+    private executeSolanaCosign;
+    private getPhantomProvider;
+    private decodeSerializedTx;
+    private bytesToHex;
+    private isZeroSignature;
+    private restoreExistingSignatures;
 }
 export declare const swapService: SwapService;
 //# sourceMappingURL=swap.d.ts.map
