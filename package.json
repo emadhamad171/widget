@@ -28,11 +28,12 @@
     "@hot-pot/hotpot-sdk-ts": "^0.0.12",
     "@reown/appkit": "^1.7.16",
     "@reown/appkit-adapter-wagmi": "^1.7.16",
+    "@solana/web3.js": "^1.98.4",
     "@walletconnect/ethereum-provider": "^2.21.1",
     "axios": "^1.9.0",
     "decimal.js": "^10.5.0",
-    "wagmi": "^3.4.2",
-    "viem": "^2.45.1"
+    "viem": "^2.45.1",
+    "wagmi": "^3.4.2"
   },
   "devDependencies": {
     "@types/node": "^22.15.16",

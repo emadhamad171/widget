@@ -13,6 +13,7 @@ import {
   encodeFunctionData,
   maxUint256,
 } from "viem";
+import { VersionedTransaction } from "@solana/web3.js";
 
 import type { Quote } from "@hot-pot/hotpot-sdk-ts";
 
@@ -77,6 +78,10 @@ export class SwapService {
 
     if (wallet.type === "tron" && approvalType === "cosign") {
       return this.executeTronCosign(intent, wallet);
+    }
+
+    if (wallet.type === "solana" && approvalType === "cosign") {
+      return this.executeSolanaCosign(intent, wallet);
     }
 
     throw new Error(
@@ -477,6 +482,107 @@ export class SwapService {
         throw new Error("Transaction rejected by user");
       }
       throw err;
+    }
+  }
+
+  private async executeSolanaCosign(
+    intent: CreateIntentData,
+    wallet: WalletState,
+  ): Promise<string> {
+    const provider = this.getPhantomProvider();
+    if (!provider?.signTransaction) {
+      throw new Error(
+        "Phantom wallet not found or signTransaction unsupported",
+      );
+    }
+
+    try {
+      const params = intent.params_to_sign as CosignApprovalToSign;
+      const transactionBytes = this.decodeSerializedTx(params.transaction);
+      const tx = VersionedTransaction.deserialize(transactionBytes);
+      const originalSignatures = [...tx.signatures];
+
+      const signedTx = await provider.signTransaction(tx);
+      this.restoreExistingSignatures(signedTx, originalSignatures);
+
+      const signedTxHex = this.bytesToHex(signedTx.serialize());
+      await hotpotApiClient.addApproval(
+        {
+          type: "cosign",
+          signed_data: {
+            transaction: signedTxHex,
+            user_address: wallet.address!,
+          },
+        },
+        intent.intent_id,
+      );
+
+      return intent.intent_id;
+    } catch (err: any) {
+      if (err?.message?.includes("User rejected") || err?.code === 4001) {
+        throw new Error("Transaction rejected by user");
+      }
+      throw err;
+    }
+  }
+
+  private getPhantomProvider(): {
+    isPhantom?: boolean;
+    signTransaction?: (
+      tx: VersionedTransaction,
+    ) => Promise<VersionedTransaction>;
+  } | null {
+    const globalWindow = window as any;
+    const provider = globalWindow.phantom?.solana ?? globalWindow.solana;
+
+    if (provider?.isPhantom) {
+      return provider;
+    }
+
+    return null;
+  }
+
+  private decodeSerializedTx(serializedTx: string): Uint8Array {
+    const clean = serializedTx.trim();
+    const isHex = clean.length % 2 === 0 && /^[0-9a-fA-F]+$/.test(clean);
+
+    if (isHex) {
+      const bytes = new Uint8Array(clean.length / 2);
+      for (let i = 0; i < clean.length; i += 2) {
+        bytes[i / 2] = Number.parseInt(clean.slice(i, i + 2), 16);
+      }
+      return bytes;
+    }
+
+    const decoded = atob(clean);
+    const bytes = new Uint8Array(decoded.length);
+    for (let i = 0; i < decoded.length; i += 1) {
+      bytes[i] = decoded.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  private bytesToHex(bytes: Uint8Array): string {
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  private isZeroSignature(signature: Uint8Array): boolean {
+    for (let i = 0; i < signature.length; i += 1) {
+      if (signature[i] !== 0) return false;
+    }
+    return true;
+  }
+
+  private restoreExistingSignatures(
+    signedTx: VersionedTransaction,
+    originalSignatures: Uint8Array[],
+  ): void {
+    for (let i = 0; i < signedTx.signatures.length; i += 1) {
+      const current = signedTx.signatures[i];
+      const original = originalSignatures[i];
+      if (original && this.isZeroSignature(current)) {
+        signedTx.signatures[i] = original;
+      }
     }
   }
 }
