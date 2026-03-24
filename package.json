@@ -8,8 +8,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "clean:demo-artifacts": "find examples -maxdepth 1 -type f \\( -name '*.mjs' -o -name '*.map' -o -name 'widget.es.js' -o -name 'widget.es.js.map' -o -name 'widget.umd.js' -o -name 'widget.umd.js.map' -o -name 'index.d.ts' -o -name 'index.d.ts.map' \\) -delete",
     "deploy": "npm run deploy:demo",
-    "deploy:demo": "npm run build && cp -R dist/. examples/ && gh-pages -d examples",
+    "deploy:demo": "npm run build && npm run clean:demo-artifacts && cp -R dist/. examples/ && gh-pages -d examples",
     "deploy:umd": "npm run build && rm -rf .deploy-umd && mkdir -p .deploy-umd && cp dist/widget.umd.js .deploy-umd/widget.umd.js && gh-pages -d .deploy-umd",
     "preview": "vite preview",
     "type-check": "tsc --noEmit"
