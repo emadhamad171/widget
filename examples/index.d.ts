@@ -51,6 +51,8 @@ declare class HotpotSwapWidget extends HTMLElement {
     private getEffectiveSwapStatus;
     private mapIntentStatusToSwapStatus;
     private isLoadingQuote;
+    private restoreFromInputFocus;
+    private sanitizeAmountInput;
     private renderSwapDividerContent;
     private renderSwapStatusToast;
     private getDisplayFromSymbol;

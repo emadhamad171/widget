@@ -7,10 +7,16 @@ export const generateStyles = (config: WidgetConfig): string => {
     cardBackgroundColor: configCardBg,
     primaryTextColor: configPrimaryText,
     secondaryTextColor: configSecondaryText,
+    swapWarningColor: configSwapWarningColor,
+    swapErrorColor: configSwapErrorColor,
+    swapSuccessColor: configSwapSuccessColor,
     buttonColor: configButtonColor,
     buttonTextColor: configButtonText,
     iconsColor: configIconsColor,
     filledInputBackgroundColor: configFilledInputBackgroundColor,
+    spinnerColor: configSpinnerColor,
+    enterAmountButtonColor: configEnterAmountButtonColor,
+    enterAmountButtonBackground: configEnterAmountButtonBackground,
   } = config;
 
   const isDark =
@@ -33,8 +39,9 @@ export const generateStyles = (config: WidgetConfig): string => {
     swapWarningColor: "#FAEAEC",
     swapErrorColor: "#FEE2E2",
     swapSuccessColor: "#DCFCE7",
-    modalSuccessColor: "#F3EEFE",
-    modalErrorColor: "#E23A4B1A",
+    spinnerColor: "#f7f7f8",
+    enterAmountButtonColor: "#F6F7FB",
+    enterAmountButtonBackground: "#2727274D",
   };
 
   const dark = {
@@ -52,8 +59,9 @@ export const generateStyles = (config: WidgetConfig): string => {
     swapWarningColor: "#FAEAEC",
     swapErrorColor: "#FEE2E2",
     swapSuccessColor: "#DCFCE7",
-    modalSuccessColor: "#C0F42F1A",
-    modalErrorColor: "#E23A4B1A",
+    spinnerColor: "#282828",
+    enterAmountButtonColor: "#FFFFFF80",
+    enterAmountButtonBackground: "#1F1F1F",
   };
 
   const base = isDark ? dark : light;
@@ -65,11 +73,27 @@ export const generateStyles = (config: WidgetConfig): string => {
     ...(configSecondaryText != null && {
       secondaryTextColor: configSecondaryText,
     }),
+    ...(configSwapWarningColor != null && {
+      swapWarningColor: configSwapWarningColor,
+    }),
+    ...(configSwapErrorColor != null && {
+      swapErrorColor: configSwapErrorColor,
+    }),
+    ...(configSwapSuccessColor != null && {
+      swapSuccessColor: configSwapSuccessColor,
+    }),
     ...(configButtonColor != null && { buttonColor: configButtonColor }),
     ...(configButtonText != null && { buttonTextColor: configButtonText }),
     ...(configIconsColor != null && { iconsColor: configIconsColor }),
     ...(configFilledInputBackgroundColor != null && {
       filledInputBackgroundColor: configFilledInputBackgroundColor,
+    }),
+    ...(configSpinnerColor != null && { spinnerColor: configSpinnerColor }),
+    ...(configEnterAmountButtonColor != null && {
+      enterAmountButtonColor: configEnterAmountButtonColor,
+    }),
+    ...(configEnterAmountButtonBackground != null && {
+      enterAmountButtonBackground: configEnterAmountButtonBackground,
     }),
   };
 
@@ -570,8 +594,8 @@ export const generateStyles = (config: WidgetConfig): string => {
 
     .swap-button--enter-amount {
       opacity: 1;
-      background: ${isDark ? "#1F1F1F" : "#2727274D"};
-      color: ${isDark ? "#FFFFFF80" : "#F6F7FB"};
+      background: ${c.enterAmountButtonBackground};
+      color: ${c.enterAmountButtonColor};
       pointer-events: none;
     }
 
@@ -950,7 +974,7 @@ export const generateStyles = (config: WidgetConfig): string => {
       border-radius: 50%;
       padding: 16px;
       box-sizing: border-box;
-      background: ${isDark ? "#282828" : "#F7F7F8"};
+      background: ${c.spinnerColor};
       display: flex;
       align-items: center;
       justify-content: center;
@@ -977,11 +1001,11 @@ export const generateStyles = (config: WidgetConfig): string => {
     }
 
     .tx-modal-icon--success {
-      background: ${c.modalSuccessColor};
+      background: ${c.swapSuccessColor};
     }
 
     .tx-modal-icon--error {
-      background: ${c.modalErrorColor};
+      background: ${c.swapErrorColor};
     }
 
     .tx-modal-icon--error svg {
@@ -1076,7 +1100,7 @@ export const generateStyles = (config: WidgetConfig): string => {
 
     .connect-wallet-modal {
       background: ${c.backgroundColor};
-      border-radius: 24px;
+      border-radius: 20px;
       padding: 24px;
       width: 100%;
       max-width: 100%;
@@ -1164,7 +1188,7 @@ export const generateStyles = (config: WidgetConfig): string => {
       border-radius: 50%;
       padding: 16px;
       box-sizing: border-box;
-      background: ${isDark ? "#282828" : "#F7F7F8"};
+      background: ${c.spinnerColor};
       display: flex;
       align-items: center;
       justify-content: center;

@@ -1,5 +1,5 @@
 {
-  "version": 1.2,
+  "version": 1.1,
   "tags": [
     {
       "name": "hotpot-swap-widget",
@@ -69,6 +69,46 @@
         {
           "name": "default-slippage",
           "description": "Default slippage tolerance (e.g. 0.5 for 0.5%)"
+        },
+        {
+          "name": "swap-warning-color",
+          "description": "Warning state background color (status indicator and warning toast state)"
+        },
+        {
+          "name": "swap-error-color",
+          "description": "Error state background color (status indicator and transaction error state)"
+        },
+        {
+          "name": "swap-success-color",
+          "description": "Success state background color (status indicator and transaction success state)"
+        },
+        {
+          "name": "swap-divider-variant",
+          "description": "Swap divider style variant",
+          "values": [
+            { "name": "v1" },
+            { "name": "v2" }
+          ]
+        },
+        {
+          "name": "walletconnect-project-id",
+          "description": "WalletConnect/Reown project id used for mobile and QR-based EVM wallet connection"
+        },
+        {
+          "name": "filled-input-background-color",
+          "description": "Background color for destination address input when the value is present"
+        },
+        {
+          "name": "spinner-color",
+          "description": "Background color of the transaction progress spinner container"
+        },
+        {
+          "name": "enter-amount-button-color",
+          "description": "Text color of the disabled Enter amount button state"
+        },
+        {
+          "name": "enter-amount-button-background",
+          "description": "Background color of the disabled Enter amount button state"
         }
       ]
     }

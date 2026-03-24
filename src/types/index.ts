@@ -13,7 +13,11 @@ export interface WidgetConfig {
   swapWarningColor?: string;
   swapErrorColor?: string;
   swapSuccessColor?: string;
+
   filledInputBackgroundColor?: string;
+  spinnerColor?: string;
+  enterAmountButtonColor?: string;
+  enterAmountButtonBackground?: string;
 
   // Default tokens
   defaultFromToken?: string;

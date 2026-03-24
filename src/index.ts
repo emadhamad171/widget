@@ -294,6 +294,32 @@ class HotpotSwapWidget extends HTMLElement {
 
   private isLoadingQuote = false;
 
+  private restoreFromInputFocus(snapshot: {
+    shouldRestore: boolean;
+    selectionStart: number | null;
+    selectionEnd: number | null;
+  }) {
+    if (!snapshot.shouldRestore) return;
+    const input = this._shadowRoot.getElementById(
+      "from-input",
+    ) as HTMLInputElement | null;
+    if (!input) return;
+    input.focus();
+    if (snapshot.selectionStart != null && snapshot.selectionEnd != null) {
+      input.setSelectionRange(snapshot.selectionStart, snapshot.selectionEnd);
+    }
+  }
+
+  private sanitizeAmountInput(value: string): string {
+    const cleaned = value.replace(/[^0-9.]/g, "");
+    const firstDotIndex = cleaned.indexOf(".");
+    if (firstDotIndex === -1) return cleaned;
+    return (
+      cleaned.slice(0, firstDotIndex + 1) +
+      cleaned.slice(firstDotIndex + 1).replace(/\./g, "")
+    );
+  }
+
   // ── Swap divider / toast / form ────────────────────────────
 
   private renderSwapDividerContent(): string {
@@ -626,7 +652,16 @@ class HotpotSwapWidget extends HTMLElement {
 
     // Amount input
     ($("from-input") as HTMLInputElement)?.addEventListener("input", (e) => {
-      this.fromAmount = (e.target as HTMLInputElement).value;
+      const input = e.target as HTMLInputElement;
+      const sanitized = this.sanitizeAmountInput(input.value);
+      if (input.value !== sanitized) {
+        const cursor = input.selectionStart ?? sanitized.length;
+        const delta = input.value.length - sanitized.length;
+        input.value = sanitized;
+        const nextPos = Math.max(0, cursor - delta);
+        input.setSelectionRange(nextPos, nextPos);
+      }
+      this.fromAmount = sanitized;
       if (this.swapStatusType === "error") this.clearSwapStatus();
       this.fetchQuoteDebounced();
     });
@@ -855,19 +890,52 @@ class HotpotSwapWidget extends HTMLElement {
 
   private fetchQuoteDebounced() {
     if (this.quoteDebounceTimer) clearTimeout(this.quoteDebounceTimer);
+
+    const amount = parseFloat(this.fromAmount);
+    if (!this.fromAmount || Number.isNaN(amount) || amount <= 0) {
+      this.isLoadingQuote = false;
+      this.currentQuote = null;
+      this.toAmount = this.fromAmount.trim() === "0" ? "0" : "";
+      const focusSnapshot = {
+        shouldRestore:
+          (this._shadowRoot.activeElement as HTMLElement | null)?.id ===
+          "from-input",
+        selectionStart:
+          (this._shadowRoot.activeElement as HTMLInputElement | null)
+            ?.selectionStart ?? null,
+        selectionEnd:
+          (this._shadowRoot.activeElement as HTMLInputElement | null)
+            ?.selectionEnd ?? null,
+      };
+      this.render();
+      this.attachEventListeners();
+      this.restoreFromInputFocus(focusSnapshot);
+      return;
+    }
+
     this.quoteDebounceTimer = window.setTimeout(async () => {
       this.quoteDebounceTimer = null;
+      const active = this._shadowRoot.activeElement as HTMLInputElement | null;
+      const focusSnapshot = {
+        shouldRestore: active?.id === "from-input",
+        selectionStart: active?.selectionStart ?? null,
+        selectionEnd: active?.selectionEnd ?? null,
+      };
       this.isLoadingQuote = true;
       this.toAmount = "";
       this.render();
       this.attachEventListeners();
+      this.restoreFromInputFocus(focusSnapshot);
       await this.fetchQuote();
-    }, 200);
+      this.restoreFromInputFocus(focusSnapshot);
+    }, 1000);
   }
 
   private async fetchQuote() {
     if (!this.fromTokenData || !this.toTokenData || !this.fromAmount) {
       this.isLoadingQuote = false;
+      this.render();
+      this.attachEventListeners();
       return;
     }
     try {
@@ -885,9 +953,21 @@ class HotpotSwapWidget extends HTMLElement {
     } catch {
       this.toAmount = "0";
     } finally {
+      const focusSnapshot = {
+        shouldRestore:
+          (this._shadowRoot.activeElement as HTMLElement | null)?.id ===
+          "from-input",
+        selectionStart:
+          (this._shadowRoot.activeElement as HTMLInputElement | null)
+            ?.selectionStart ?? null,
+        selectionEnd:
+          (this._shadowRoot.activeElement as HTMLInputElement | null)
+            ?.selectionEnd ?? null,
+      };
       this.isLoadingQuote = false;
       this.render();
       this.attachEventListeners();
+      this.restoreFromInputFocus(focusSnapshot);
     }
   }
 
