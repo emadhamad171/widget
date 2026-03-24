@@ -10,6 +10,7 @@ export const generateStyles = (config: WidgetConfig): string => {
     buttonColor: configButtonColor,
     buttonTextColor: configButtonText,
     iconsColor: configIconsColor,
+    filledInputBackgroundColor: configFilledInputBackgroundColor,
   } = config;
 
   const isDark =
@@ -67,6 +68,9 @@ export const generateStyles = (config: WidgetConfig): string => {
     ...(configButtonColor != null && { buttonColor: configButtonColor }),
     ...(configButtonText != null && { buttonTextColor: configButtonText }),
     ...(configIconsColor != null && { iconsColor: configIconsColor }),
+    ...(configFilledInputBackgroundColor != null && {
+      filledInputBackgroundColor: configFilledInputBackgroundColor,
+    }),
   };
 
   return `

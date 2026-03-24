@@ -8,7 +8,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "deploy": "npm run build && cp -R dist/. examples/ && gh-pages -d examples",
+    "deploy": "npm run deploy:demo",
+    "deploy:demo": "npm run build && cp -R dist/. examples/ && gh-pages -d examples",
+    "deploy:umd": "npm run build && rm -rf .deploy-umd && mkdir -p .deploy-umd && cp dist/widget.umd.js .deploy-umd/widget.umd.js && gh-pages -d .deploy-umd",
     "preview": "vite preview",
     "type-check": "tsc --noEmit"
   },

@@ -174,7 +174,6 @@ export class WalletManager {
       }
     }
 
-    // 2) Fallback: AppKit (WalletConnect UX like rfq-web)
     if (!this.walletConnectProjectId) {
       if (isMobileDevice() && typeof window !== "undefined") {
         const dappUrl = window.location.href.replace(/^https?:\/\//, "");
@@ -213,19 +212,15 @@ export class WalletManager {
   async connectPhantom(): Promise<string> {
     const provider = (window as any).phantom?.solana;
 
-    // No injected Phantom provider – on mobile пробуем открыть dapp в Phantom браузере
     if (!provider?.isPhantom) {
       if (isMobileDevice() && typeof window !== "undefined") {
         const currentUrl = window.location.href;
         const ref = window.location.origin;
 
-        // Официальный deeplink в Phantom dApp browser:
-        // https://phantom.app/ul/browse/<url>?ref=<ref>
         const deeplink = `https://phantom.app/ul/browse/${encodeURIComponent(
           currentUrl,
         )}?ref=${encodeURIComponent(ref)}`;
 
-        // Перенаправляем пользователя в Phantom; дальнейшее подключение произойдёт уже внутри кошелька
         window.location.href = deeplink;
 
         throw createWalletRedirectError(

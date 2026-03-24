@@ -49,12 +49,13 @@ export class SwapService {
     }
 
     const destAddrRaw = (destinationAddress || "").trim() || wallet.address;
-    const [sourceAddr, destAddr, refundAddr] = await this.normalizeIntentAddresses(
-      wallet,
-      quote,
-      wallet.address,
-      destAddrRaw,
-    );
+    const [sourceAddr, destAddr, refundAddr] =
+      await this.normalizeIntentAddresses(
+        wallet,
+        quote,
+        wallet.address,
+        destAddrRaw,
+      );
 
     const intent = await hotpotApiClient.createIntent(
       quoteId,
@@ -79,7 +80,7 @@ export class SwapService {
     }
 
     throw new Error(
-      `Unsupported wallet/approval: ${wallet.type} / ${approvalType}`
+      `Unsupported wallet/approval: ${wallet.type} / ${approvalType}`,
     );
   }
 
@@ -155,7 +156,7 @@ export class SwapService {
     intent: CreateIntentData,
     quote: Quote,
     wallet: WalletState,
-    fromToken: Token
+    fromToken: Token,
   ): Promise<string> {
     if (typeof window === "undefined" || !window.ethereum) {
       throw new Error("Ethereum wallet not found");
@@ -166,7 +167,7 @@ export class SwapService {
       intent.params_to_sign as Permit2ApprovalToSign,
       quote,
       wallet.address!,
-      intent.deadline_secs
+      intent.deadline_secs,
     );
 
     const walletClient = createWalletClient({
@@ -193,11 +194,17 @@ export class SwapService {
     try {
       await hotpotApiClient.addApproval(
         { type: "permit2", signed_data: signature },
-        intent.intent_id
+        intent.intent_id,
       );
     } catch (err: any) {
       if (err instanceof InsufficientAllowanceError) {
-        await this.approveTokenIfNeeded(fromToken, wallet, intent, quote, chainId);
+        await this.approveTokenIfNeeded(
+          fromToken,
+          wallet,
+          intent,
+          quote,
+          chainId,
+        );
         signature = await walletClient.signTypedData({
           domain: permit2Params.domain,
           types: permit2Params.types as any,
@@ -206,7 +213,7 @@ export class SwapService {
         });
         await hotpotApiClient.addApproval(
           { type: "permit2", signed_data: signature },
-          intent.intent_id
+          intent.intent_id,
         );
       } else {
         throw err;
@@ -221,7 +228,7 @@ export class SwapService {
     wallet: WalletState,
     intent: CreateIntentData,
     quote: Quote,
-    chainId: number
+    chainId: number,
   ): Promise<void> {
     if (!token.address) return;
 
@@ -233,7 +240,7 @@ export class SwapService {
       token.address,
       wallet.address!,
       spender,
-      chainId
+      chainId,
     );
 
     if (allowance >= requiredAmount) return;
@@ -262,7 +269,7 @@ export class SwapService {
 
   private async waitForTransactionConfirmation(
     txHash: string,
-    maxWaitMs: number = 60000
+    maxWaitMs: number = 60000,
   ): Promise<void> {
     const start = Date.now();
     const pollInterval = 2000;
@@ -289,7 +296,7 @@ export class SwapService {
     tokenAddress: string,
     owner: string,
     spender: string,
-    chainId: number
+    chainId: number,
   ): Promise<bigint> {
     const data = encodeFunctionData({
       abi: ERC20_ABI,
@@ -326,7 +333,7 @@ export class SwapService {
     intent: CreateIntentData,
     quote: Quote,
     wallet: WalletState,
-    fromToken: Token
+    fromToken: Token,
   ): Promise<string> {
     const tronWeb = await this.getTronWeb();
     if (!tronWeb?.ready) {
@@ -337,7 +344,7 @@ export class SwapService {
       intent.params_to_sign as Permit2ApprovalToSign,
       quote,
       wallet.address!,
-      intent.deadline_secs
+      intent.deadline_secs,
     );
 
     let signature: string;
@@ -345,10 +352,13 @@ export class SwapService {
       signature = await tronWeb.trx._signTypedData(
         permit2Params.domain,
         permit2Params.types,
-        permit2Params.message
+        permit2Params.message,
       );
     } catch (err: any) {
-      if (err?.message?.includes("Confirmation declined") || err?.message?.includes("rejected")) {
+      if (
+        err?.message?.includes("Confirmation declined") ||
+        err?.message?.includes("rejected")
+      ) {
         throw new Error("Transaction rejected by user");
       }
       throw err;
@@ -357,7 +367,7 @@ export class SwapService {
     try {
       await hotpotApiClient.addApproval(
         { type: "permit2", signed_data: signature },
-        intent.intent_id
+        intent.intent_id,
       );
     } catch (err: any) {
       if (err instanceof InsufficientAllowanceError) {
@@ -365,11 +375,11 @@ export class SwapService {
         signature = await tronWeb.trx._signTypedData(
           permit2Params.domain,
           permit2Params.types,
-          permit2Params.message
+          permit2Params.message,
         );
         await hotpotApiClient.addApproval(
           { type: "permit2", signed_data: signature },
-          intent.intent_id
+          intent.intent_id,
         );
       } else {
         throw err;
@@ -380,15 +390,32 @@ export class SwapService {
   }
 
   private readonly TRC20_ABI = [
-    { constant: true, inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }], name: "allowance", outputs: [{ type: "uint256" }], type: "function" },
-    { inputs: [{ name: "spender", type: "address" }, { name: "value", type: "uint256" }], name: "approve", outputs: [{ type: "bool" }], type: "function" },
+    {
+      constant: true,
+      inputs: [
+        { name: "owner", type: "address" },
+        { name: "spender", type: "address" },
+      ],
+      name: "allowance",
+      outputs: [{ type: "uint256" }],
+      type: "function",
+    },
+    {
+      inputs: [
+        { name: "spender", type: "address" },
+        { name: "value", type: "uint256" },
+      ],
+      name: "approve",
+      outputs: [{ type: "bool" }],
+      type: "function",
+    },
   ];
 
   private async approveTronTokenIfNeeded(
     token: Token,
     wallet: WalletState,
     intent: CreateIntentData,
-    quote: Quote
+    quote: Quote,
   ): Promise<void> {
     if (!token.address) return;
 
@@ -400,23 +427,28 @@ export class SwapService {
     const requiredAmount = BigInt(quote.source_amount_lots);
 
     const contract = await tronWeb.contract(this.TRC20_ABI, token.address);
-    const allowanceResult = await contract.allowance(wallet.address!, spender).call();
+    const allowanceResult = await contract
+      .allowance(wallet.address!, spender)
+      .call();
     const allowance = BigInt(allowanceResult.toString());
 
     if (allowance >= requiredAmount) return;
 
-    const sendResult = await contract.approve(spender, maxUint256.toString()).send({
-      feeLimit: 150_000_000,
-      shouldPollResponse: true,
-    });
+    const sendResult = await contract
+      .approve(spender, maxUint256.toString())
+      .send({
+        feeLimit: 150_000_000,
+        shouldPollResponse: true,
+      });
 
-    const txId = typeof sendResult === "string" ? sendResult : (sendResult as any)?.txid;
+    const txId =
+      typeof sendResult === "string" ? sendResult : (sendResult as any)?.txid;
     if (!txId) throw new Error("Failed to get Tron approve tx id");
   }
 
   private async executeTronCosign(
     intent: CreateIntentData,
-    wallet: WalletState
+    wallet: WalletState,
   ): Promise<string> {
     const tronWeb = await this.getTronWeb();
     if (!tronWeb?.ready) {
@@ -436,7 +468,7 @@ export class SwapService {
             user_address: wallet.address!,
           },
         },
-        intent.intent_id
+        intent.intent_id,
       );
 
       return intent.intent_id;

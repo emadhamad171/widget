@@ -16,6 +16,7 @@ export const OBSERVED_ATTRIBUTES = [
   "swap-success-color",
   "swap-divider-variant",
   "walletconnect-project-id",
+  "filled-input-background-color",
 ];
 
 export function parseWidgetAttributes(el: HTMLElement): WidgetConfig {
@@ -37,5 +38,6 @@ export function parseWidgetAttributes(el: HTMLElement): WidgetConfig {
     defaultSlippage: parseFloat(attr("default-slippage") || "0.5"),
     swapDividerVariant: (attr("swap-divider-variant") as "v1" | "v2") || "v2",
     walletConnectProjectId: attr("walletconnect-project-id") || undefined,
+    filledInputBackgroundColor: attr("filled-input-background-color") || undefined,
   };
 }

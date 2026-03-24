@@ -13,6 +13,7 @@ export interface WidgetConfig {
   swapWarningColor?: string;
   swapErrorColor?: string;
   swapSuccessColor?: string;
+  filledInputBackgroundColor?: string;
 
   // Default tokens
   defaultFromToken?: string;
@@ -22,7 +23,7 @@ export interface WidgetConfig {
   defaultSlippage?: number;
 
   // UI
-  swapDividerVariant?: "v1" | "v2"; // v1: circle, v2: pill (default)
+  swapDividerVariant?: "v1" | "v2";
 
   // WalletConnect / mobile wallets
   walletConnectProjectId?: string;

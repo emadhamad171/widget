@@ -52,7 +52,7 @@ import {
   getWalletIconSmall,
 } from "./ui/helpers";
 
-const CONNECT_WALLET_TIMEOUT_MS = 30_000;
+const CONNECT_WALLET_TIMEOUT_MS = 15_000;
 
 class HotpotSwapWidget extends HTMLElement {
   private _shadowRoot: ShadowRoot;
