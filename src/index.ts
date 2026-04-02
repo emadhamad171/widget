@@ -131,6 +131,7 @@ class HotpotSwapWidget extends HTMLElement {
 
   async connectedCallback() {
     this.parseAttributes();
+    if (this.walletState.connected) this.showDestinationAddress = true;
     await this.initializeTokens();
     this.render();
     this.attachEventListeners();
@@ -425,8 +426,8 @@ class HotpotSwapWidget extends HTMLElement {
               </button>
             </div>
             <div class="balance-row">
-              <span class="balance-fiat">${fromUsd}</span>
-              <span class="balance-token">${WALLET_ICON_SVG}<span>${fromBal} ${fromSymbol}</span></span>
+              <span class="balance-fiat">${this.fromTokenData ? fromUsd : '<span class="balance-skeleton balance-skeleton--short"></span>'}</span>
+              <span class="balance-token">${WALLET_ICON_SVG}${this.fromTokenData ? `<span>${fromBal} ${fromSymbol}</span>` : '<span class="balance-skeleton"></span>'}</span>
             </div>
             ${this.renderSlippagePanel()}
           </div>
@@ -444,8 +445,8 @@ class HotpotSwapWidget extends HTMLElement {
               </button>
             </div>
             <div class="balance-row">
-              <span class="balance-fiat">${toUsd}</span>
-              <span class="balance-token">${WALLET_ICON_SVG}<span>${toBal} ${this.toTokenData?.symbol || ""}</span></span>
+              <span class="balance-fiat">${this.toTokenData ? toUsd : '<span class="balance-skeleton balance-skeleton--short"></span>'}</span>
+              <span class="balance-token">${WALLET_ICON_SVG}${this.toTokenData ? `<span>${toBal} ${this.toTokenData.symbol}</span>` : '<span class="balance-skeleton"></span>'}</span>
             </div>
           </div>
           </div>

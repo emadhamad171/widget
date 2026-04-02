@@ -402,6 +402,18 @@ export const generateStyles = (config: WidgetConfig): string => {
       flex-shrink: 0;
     }
 
+    .balance-skeleton {
+      display: inline-block;
+      width: 42px;
+      height: 12px;
+      border-radius: 4px;
+      background: ${c.iconBorder};
+    }
+
+    .balance-skeleton--short {
+      width: 28px;
+    }
+
     .swap-divider {
       position: absolute;
       left: 50%;
@@ -1396,8 +1408,8 @@ export const generateStyles = (config: WidgetConfig): string => {
     }
 
     .token-icon-placeholder {
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       background: ${c.iconBorder};
     }

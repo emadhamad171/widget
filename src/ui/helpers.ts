@@ -44,10 +44,13 @@ export function renderTokenIcon(
   token: Token | null,
   networksList: NetworkInfo[],
 ): string {
-  if (!token) return "";
+  const placeholder = '<span class="token-icon-placeholder" aria-hidden="true"></span>';
+  if (!token) {
+    return `<span class="token-icon-wrap">${placeholder}</span>`;
+  }
   const icon = token.icon_url
     ? `<img src="${token.icon_url}" class="token-icon" alt="${token.symbol}" />`
-    : '<span class="token-icon-placeholder"></span>';
+    : placeholder;
   const networkIconUrl = getNetworkIconUrl(token.network, networksList);
   const networkBadge = networkIconUrl
     ? `<span class="token-network-icon-wrap"><img src="${networkIconUrl}" class="token-network-icon" alt="" /></span>`
